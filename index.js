@@ -116,7 +116,8 @@ app.post('/company/:number/analyze', async (req, res) => {
       { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiApiKey}` } }
     );
     const analysis = aiRes.data.choices[0].message.content;
-    res.render('partials/analysis', { analysis });
+    // Render analysis result along with the original prompt
+    res.render('partials/analysis', { analysis, prompt });
   } catch (err) {
     console.error('Analysis error:', err);
     res.status(500).send('<div>Error performing analysis</div>');

@@ -1,14 +1,18 @@
-<div class="analysis-result">
-  <% if (analysis) { %>
-    <div id="analysisContent" class="bg-light p-3 border rounded markdown-body"></div>
-    <script>
-      (function() {
-        // Parse and render markdown analysis
-        const md = <%- JSON.stringify(analysis) %>;
-        document.getElementById('analysisContent').innerHTML = marked.parse(md);
-      })();
-    </script>
-  <% } else { %>
-    <div class="text-danger">Error generating analysis.</div>
-  <% } %>
+<% if (analysis) { %>
+<div class="analysis-result mb-4">
+  <div class="analysis-question mb-2 fw-bold">Q: <%= prompt %></div>
+  <div class="analysis-content bg-light p-3 border rounded markdown-body"></div>
 </div>
+<script>
+  (function() {
+    // Render markdown analysis in the correct container
+    var container = document.currentScript.previousElementSibling;
+    var markdown = <%- JSON.stringify(analysis) %>;
+    container.querySelector('.analysis-content').innerHTML = marked.parse(markdown);
+  })();
+</script>
+<% } else { %>
+<div class="analysis-result mb-4">
+  <div class="text-danger">Error generating analysis.</div>
+</div>
+<% } %>
