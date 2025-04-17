@@ -83,7 +83,7 @@
               // Escape HTML
               var safeText = userText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
               var userHtml = '<div class="chat-item-user mb-1"><div class="alert alert-secondary mb-0">' + safeText + '</div></div>';
-              container.insertAdjacentHTML('beforeend', userHtml);
+              container.insertAdjacentHTML('afterbegin', userHtml);
             }
           }
         }
