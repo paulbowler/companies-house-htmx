@@ -111,24 +111,27 @@ app.post('/company/:number/analyze', async (req, res) => {
     for (let i = 0; i < Math.min(filingHistory.length, 3); i++) {
       const item = filingHistory[i];
       try {
+        // Determine metadata URL (prefer link in item if present)
+        const metadataPath = item.links && (item.links.document_metadata || item.links.documentMetadata);
+        const metaUrl = metadataPath
+          ? `https://api.company-information.service.gov.uk${metadataPath}`
+          : `https://api.company-information.service.gov.uk/company/${companyNumber}/filing-history/${item.transaction_id}/document_metadata`;
         // Get document metadata
-        const metaRes = await axios.get(
-          `https://api.company-information.service.gov.uk/company/${companyNumber}/filing-history/${item.transaction_id}/document`,
-          authHeader
-        );
-        const docLink = metaRes.data.links && metaRes.data.links.document;
-        if (docLink) {
+        const metaRes = await axios.get(metaUrl, authHeader);
+        const docPath = metaRes.data.links && (metaRes.data.links.document || metaRes.data.links.document_path);
+        if (docPath) {
           // Fetch PDF
           const pdfRes = await axios.get(
-            `https://api.company-information.service.gov.uk${docLink}`,
+            `https://api.company-information.service.gov.uk${docPath}`,
             { ...authHeader, responseType: 'arraybuffer' }
           );
-          // Parse text
+          // Parse PDF text
           const parsed = await pdfParse(pdfRes.data);
           documents.push({ description: item.description, date: item.date, text: parsed.text });
         }
       } catch (docErr) {
-        console.error('Error fetching/parsing document:', docErr.message);
+        // No document available or parse failed; skip gracefully
+        console.info(`Skipping filing ${item.transaction_id}: ${docErr.message}`);
       }
     }
     // Construct messages for OpenAI
