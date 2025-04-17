@@ -59,6 +59,29 @@
         if (details) details.innerHTML = '';
       });
     }
+    // Show spinner on analysis submit and restore button after response
+    document.body.addEventListener('htmx:beforeRequest', function(evt) {
+      var form = evt.detail.elt.closest('#analysis form');
+      if (form) {
+        var btn = form.querySelector('button[type=submit]');
+        if (btn) {
+          btn.disabled = true;
+          btn.setAttribute('data-original-text', btn.innerHTML);
+          btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Analyzing...';
+        }
+      }
+    });
+    document.body.addEventListener('htmx:afterRequest', function(evt) {
+      var form = document.querySelector('#analysis form');
+      if (form) {
+        var btn = form.querySelector('button[type=submit]');
+        if (btn && btn.hasAttribute('data-original-text')) {
+          btn.disabled = false;
+          btn.innerHTML = btn.getAttribute('data-original-text');
+          btn.removeAttribute('data-original-text');
+        }
+      }
+    });
   </script>
 </body>
 </html>

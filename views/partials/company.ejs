@@ -134,10 +134,11 @@
     </div>
     <div class="tab-pane fade" id="analysis" role="tabpanel" aria-labelledby="analysis-tab">
       <form hx-post="/company/<%= company.company_number %>/analyze"
-            hx-target="#analysisResponse" hx-swap="innerHTML" class="mt-3">
+            hx-target="#analysisResponse" hx-swap="afterbegin" class="mt-3">
         <div class="mb-2">
-          <textarea name="prompt" class="form-control" rows="4"
-                    placeholder="Enter your analysis question..."></textarea>
+          <textarea id="analysisPrompt" name="prompt" class="form-control" rows="4"
+                    placeholder="Enter your analysis question..." onfocus="this.value=''">
+          </textarea>
         </div>
         <button type="submit" class="btn btn-primary">Analyze</button>
       </form>
