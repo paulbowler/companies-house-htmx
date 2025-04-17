@@ -22,6 +22,11 @@
               data-bs-target="#filing-history" type="button" role="tab" aria-controls="filing-history"
               aria-selected="false">Filing History</button>
     </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="analysis-tab" data-bs-toggle="tab"
+              data-bs-target="#analysis" type="button" role="tab" aria-controls="analysis"
+              aria-selected="false">Analysis</button>
+    </li>
     </ul>
   </div>
   <div class="card-body">
@@ -127,5 +132,17 @@
       <% } %>
     </div>
     </div>
+    <div class="tab-pane fade" id="analysis" role="tabpanel" aria-labelledby="analysis-tab">
+      <form hx-post="/company/<%= company.company_number %>/analyze"
+            hx-target="#analysisResponse" hx-swap="innerHTML" class="mt-3">
+        <div class="mb-2">
+          <textarea name="prompt" class="form-control" rows="4"
+                    placeholder="Enter your analysis question..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Analyze</button>
+      </form>
+      <div id="analysisResponse" class="mt-3"></div>
+    </div>
+  </div>
   </div>
 </div>
