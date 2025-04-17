@@ -121,7 +121,7 @@ app.post('/company/:number/analyze', async (req, res) => {
     // Construct messages for OpenAI
     // Construct messages for AI: provide company data, document URLs, and user request
     const messages = [
-      { role: 'system', content: 'You are an expert in UK Companies House data, accounting, and company law. Use the provided API document URLs to fetch and analyze balance sheets and other submitted forms as needed.' },
+      { role: 'system', content: 'You are an expert in UK Companies House data, accounting, and company law. Use the provided API document URLs to fetch and analyze balance sheets and other submitted forms as needed. Provide complete, self-contained answers in a single response—including any extracted financial figures—without pausing or asking the user to wait.' },
       { role: 'user', content: `Company data: ${JSON.stringify({ company, officers, shareholders, filingHistory })}` },
       { role: 'user', content: `Document URLs for context: ${JSON.stringify(documents)}` },
       { role: 'user', content: `User request: ${prompt}` }
