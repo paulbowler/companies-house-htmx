@@ -21,6 +21,8 @@ const authHeader = {
 };
 // OpenAI API key for analysis
 const openaiApiKey = process.env.OPENAI_API_KEY;
+// PDF parsing
+const pdfParse = require('pdf-parse');
 
 app.get('/', (req, res) => {
   res.render('index');
@@ -104,10 +106,38 @@ app.post('/company/:number/analyze', async (req, res) => {
     const officers = officersRes.data.items || [];
     const shareholders = pscRes.data.items || [];
     const filingHistory = filingHistoryRes.data.items || [];
+    // Fetch and parse filing documents (e.g., PDFs) for context (limit to first 3)
+    const documents = [];
+    for (let i = 0; i < Math.min(filingHistory.length, 3); i++) {
+      const item = filingHistory[i];
+      try {
+        // Get document metadata
+        const metaRes = await axios.get(
+          `https://api.company-information.service.gov.uk/company/${companyNumber}/filing-history/${item.transaction_id}/document`,
+          authHeader
+        );
+        const docLink = metaRes.data.links && metaRes.data.links.document;
+        if (docLink) {
+          // Fetch PDF
+          const pdfRes = await axios.get(
+            `https://api.company-information.service.gov.uk${docLink}`,
+            { ...authHeader, responseType: 'arraybuffer' }
+          );
+          // Parse text
+          const parsed = await pdfParse(pdfRes.data);
+          documents.push({ description: item.description, date: item.date, text: parsed.text });
+        }
+      } catch (docErr) {
+        console.error('Error fetching/parsing document:', docErr.message);
+      }
+    }
     // Construct messages for OpenAI
+    // Construct messages with documents
     const messages = [
-      { role: 'system', content: 'You are an expert in UK Companies House data, accounting, and company law. Provide analysis, warnings, and risk profiles for corporate entities.' },
-      { role: 'user', content: `Company data: ${JSON.stringify({ company, officers, shareholders, filingHistory })}. User request: ${prompt}` }
+      { role: 'system', content: 'You are an expert in UK Companies House data, accounting, and company law. Provide analysis, warnings, and risk profiles for corporate entities. You may reference provided financial document texts.' },
+      { role: 'user', content: `Company data: ${JSON.stringify({ company, officers, shareholders, filingHistory })}.` },
+      { role: 'user', content: `Document contexts (parsed text) for analysis: ${JSON.stringify(documents)}` },
+      { role: 'user', content: `User request: ${prompt}` }
     ];
     // Call OpenAI Chat API
     const aiRes = await axios.post(
