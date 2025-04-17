@@ -76,8 +76,10 @@ app.get('/company/:number', async (req, res) => {
     // Initialize assistant session for this company, instructing use of functions
     sessions[company.company_number] = {
       messages: [
-        { role: 'system', content: 'You are an expert in UK Companies House data, accounting, and company law. Use the provided company_number and the available functions to fetch any required data.' },
-        { role: 'system', content: JSON.stringify({ company_number: company.company_number }) }
+        {
+          role: 'system',
+          content: `You are an expert in UK Companies House data, accounting, and company law. The current company number is ${company.company_number}. You have access to the following functions: search_companies, get_company_details, get_company_officers, get_company_psc, get_filing_history, get_document_metadata, get_document_contents. When the user requests data or analysis, you must immediately use the appropriate function calls. You must not output any internal reasoning, planning, or descriptive text—only emit the function call JSON or, once you have all required data, return the final answer exactly.`
+        }
       ]
     };
     res.render('partials/company', { company, officers, shareholders, filingHistory });
@@ -132,6 +134,29 @@ app.post('/company/:number/analyze', async (req, res) => {
         name: 'get_filing_history',
         description: 'Retrieve filing history items',
         parameters: { type: 'object', properties: { company_number: { type: 'string' } }, required: ['company_number'] }
+      },
+      {
+        name: 'get_document_metadata',
+        description: 'Retrieve metadata for a filing document, including the content link to the document API',
+        parameters: {
+          type: 'object',
+          properties: {
+            company_number: { type: 'string', description: 'The Companies House number' },
+            transaction_id: { type: 'string', description: 'The filing history transaction ID' }
+          },
+          required: ['company_number', 'transaction_id']
+        }
+      },
+      {
+        name: 'get_document_contents',
+        description: 'Retrieve the PDF content for a given document ID as a base64-encoded string',
+        parameters: {
+          type: 'object',
+          properties: {
+            document_id: { type: 'string', description: 'The document ID from metadata' }
+          },
+          required: ['document_id']
+        }
       }
     ];
     // Retrieve or initialize session messages for this company
@@ -139,49 +164,49 @@ app.post('/company/:number/analyze', async (req, res) => {
     const messages = session.messages;
     // Append user prompt
     messages.push({ role: 'user', content: userPrompt });
-    // First API call to potentially invoke functions
-    // Initial call: allow assistant to call functions if needed
-    // First pass: allow assistant to call functions
-    let response = await openai.chat.completions.create({ model: 'gpt-4.1-mini', messages, functions, function_call: 'auto' });
-    let message = response.choices[0].message;
-    // If a function call is requested by the assistant
-    // If assistant invoked a function, execute and continue
-    if (message.function_call) {
+    // Iteratively handle any function calls requested by the assistant
+    const fnMap = {
+      search_companies: args => axios.get(
+        `https://api.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(args.query)}`, authHeader
+      ).then(r => r.data),
+      get_company_details: args => axios.get(
+        `https://api.company-information.service.gov.uk/company/${args.company_number}`, authHeader
+      ).then(r => r.data),
+      get_company_officers: args => axios.get(
+        `https://api.company-information.service.gov.uk/company/${args.company_number}/officers?items_per_page=100`, authHeader
+      ).then(r => r.data),
+      get_company_psc: args => axios.get(
+        `https://api.company-information.service.gov.uk/company/${args.company_number}/persons-with-significant-control?items_per_page=100`, authHeader
+      ).then(r => r.data),
+      get_filing_history: args => axios.get(
+        `https://api.company-information.service.gov.uk/company/${args.company_number}/filing-history?items_per_page=100`, authHeader
+      ).then(r => r.data),
+      get_document_metadata: args => axios.get(
+        `https://api.company-information.service.gov.uk/company/${args.company_number}/filing-history/${args.transaction_id}`,
+        authHeader
+      ).then(res => res.data),
+      get_document_contents: args => axios.get(
+        `https://document-api.company-information.service.gov.uk/document/${args.document_id}/content`,
+        Object.assign({}, authHeader, { responseType: 'arraybuffer' })
+      ).then(res => {
+        const document_base64 = Buffer.from(res.data, 'binary').toString('base64');
+        return { document_id: args.document_id, document_base64 };
+      })
+    };
+    let message, response;
+    while (true) {
+      response = await openai.chat.completions.create({ model: 'gpt-4.1-mini', messages, functions, function_call: 'auto' });
+      message = response.choices[0].message;
+      if (!message.function_call) break;
       const fnName = message.function_call.name;
       const fnArgs = JSON.parse(message.function_call.arguments);
-      // Map function name to actual call
-      const fnMap = {
-        search_companies: args => axios.get(
-          `https://api.company-information.service.gov.uk/search/companies?q=${encodeURIComponent(args.query)}`, authHeader
-        ).then(r => r.data),
-        get_company_details: args => axios.get(
-          `https://api.company-information.service.gov.uk/company/${args.company_number}`, authHeader
-        ).then(r => r.data),
-        get_company_officers: args => axios.get(
-          `https://api.company-information.service.gov.uk/company/${args.company_number}/officers?items_per_page=100`, authHeader
-        ).then(r => r.data),
-        get_company_psc: args => axios.get(
-          `https://api.company-information.service.gov.uk/company/${args.company_number}/persons-with-significant-control?items_per_page=100`, authHeader
-        ).then(r => r.data),
-        get_filing_history: args => axios.get(
-          `https://api.company-information.service.gov.uk/company/${args.company_number}/filing-history?items_per_page=100`, authHeader
-        ).then(r => r.data)
-      };
+      if (!fnMap[fnName]) throw new Error(`Unsupported function: ${fnName}`);
       const fnResult = await fnMap[fnName](fnArgs);
-      // Append assistant call and function response to messages
-      // Record the function call message
       messages.push(message);
-      // Record the function response
       messages.push({ role: 'function', name: fnName, content: JSON.stringify(fnResult) });
-      // Final assistant call without functions
-      // Final assistant response after function execution
-      // Final assistant response without further function calls
-      const finalRes = await openai.chat.completions.create({ model: 'gpt-4.1-mini', messages });
-      message = finalRes.choices[0].message;
     }
-    // Save assistant message to session
+    // Save assistant's final response and render
     messages.push(message);
-    // Send back the assistant's content
     res.render('partials/analysis', { analysis: message.content, prompt: userPrompt });
   } catch (err) {
     console.error('Analysis error:', err);
