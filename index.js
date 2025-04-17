@@ -114,17 +114,20 @@ app.post('/company/:number/analyze', async (req, res) => {
         // Determine metadata URL (prefer link in item if present)
         const metadataPath = item.links && (item.links.document_metadata || item.links.documentMetadata);
         const metaUrl = metadataPath
-          ? `https://api.company-information.service.gov.uk${metadataPath}`
+          ? (metadataPath.startsWith('http')
+              ? metadataPath
+              : `https://api.company-information.service.gov.uk${metadataPath}`)
           : `https://api.company-information.service.gov.uk/company/${companyNumber}/filing-history/${item.transaction_id}/document_metadata`;
         // Get document metadata
         const metaRes = await axios.get(metaUrl, authHeader);
         const docPath = metaRes.data.links && (metaRes.data.links.document || metaRes.data.links.document_path);
         if (docPath) {
+          // Build correct PDF URL
+          const pdfUrl = docPath.startsWith('http')
+            ? docPath
+            : `https://api.company-information.service.gov.uk${docPath}`;
           // Fetch PDF
-          const pdfRes = await axios.get(
-            `https://api.company-information.service.gov.uk${docPath}`,
-            { ...authHeader, responseType: 'arraybuffer' }
-          );
+          const pdfRes = await axios.get(pdfUrl, { ...authHeader, responseType: 'arraybuffer' });
           // Parse PDF text
           const parsed = await pdfParse(pdfRes.data);
           documents.push({ description: item.description, date: item.date, text: parsed.text });
