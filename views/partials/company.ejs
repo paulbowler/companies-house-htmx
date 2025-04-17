@@ -1,12 +1,18 @@
-<div class="company-card">
-  <h2><%= company.company_name %></h2>
-  <p><strong>Company Number:</strong> <%= company.company_number %></p>
-  <p><strong>Status:</strong> <%= company.company_status %></p>
-  <p><strong>Incorporated:</strong> <%= company.date_of_creation %></p>
-  <p><strong>Address:</strong></p>
-  <pre>
-<%= company.registered_office_address?.address_line_1 || '' %>
-<%= company.registered_office_address?.locality || '' %>
-<%= company.registered_office_address?.postal_code || '' %>
-  </pre>
+<div class="card">
+  <div class="card-body">
+    <h3 class="card-title"><%= company.company_name %></h3>
+    <p class="card-text"><strong>Company Number:</strong> <%= company.company_number %></p>
+    <p class="card-text">
+      <strong>Status:</strong>
+      <span class="badge <%= company.company_status === 'active' ? 'bg-success' : 'bg-secondary' %> text-capitalize">
+        <%= company.company_status %>
+      </span>
+    </p>
+    <p class="card-text"><strong>Incorporated:</strong> <%= company.date_of_creation %></p>
+    <p class="card-text"><strong>Address:</strong><br>
+      <%= company.registered_office_address?.address_line_1 || '' %><br>
+      <%= company.registered_office_address?.locality || '' %><br>
+      <%= company.registered_office_address?.postal_code || '' %>
+    </p>
+  </div>
 </div>

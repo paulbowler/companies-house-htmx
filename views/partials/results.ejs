@@ -1,11 +1,14 @@
-<ul>
-  <% results.forEach(result=> { %>
-    <li>
-      <button type="button" hx-get="/company/<%= result.company_number %>" hx-trigger="click"
-        hx-target="#company-details" hx-swap="innerHTML">
-        <%= result.title %> - <%= result.company_number %>
-      </button>
-
+<ul class="list-group">
+  <% results.forEach(result => { %>
+    <li class="list-group-item list-group-item-action"
+        hx-get="/company/<%= result.company_number %>"
+        hx-trigger="click"
+        hx-target="#company-details"
+        hx-swap="innerHTML">
+      <div class="d-flex justify-content-between align-items-center">
+        <span><%= result.title %></span>
+        <small class="text-muted"><%= result.company_number %></small>
+      </div>
     </li>
-    <% }) %>
+  <% }) %>
 </ul>
