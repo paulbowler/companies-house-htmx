@@ -1,6 +1,6 @@
 <ul class="list-group">
   <% results.forEach(result => { %>
-    <li class="list-group-item list-group-item-action"
+    <li class="list-group-item list-group-item-action" onclick="collapseResults(this)"
         hx-get="/company/<%= result.company_number %>"
         hx-trigger="click"
         hx-target="#company-details"
