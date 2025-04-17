@@ -1,6 +1,13 @@
 <div class="analysis-result">
   <% if (analysis) { %>
-    <pre class="bg-light p-3 border rounded"><%= analysis %></pre>
+    <div id="analysisContent" class="bg-light p-3 border rounded markdown-body"></div>
+    <script>
+      (function() {
+        // Parse and render markdown analysis
+        const md = <%- JSON.stringify(analysis) %>;
+        document.getElementById('analysisContent').innerHTML = marked.parse(md);
+      })();
+    </script>
   <% } else { %>
     <div class="text-danger">Error generating analysis.</div>
   <% } %>
