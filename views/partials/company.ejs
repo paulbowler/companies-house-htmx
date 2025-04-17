@@ -1,3 +1,4 @@
+<% var pretty = function(str) { return str ? str.split('-').map(function(word) { return word.charAt(0).toUpperCase() + word.slice(1); }).join(' ') : ''; }; %>
 <div class="card mt-4">
   <div class="card-header">
     <ul class="nav nav-tabs card-header-tabs" id="companyTabs" role="tablist">
@@ -70,13 +71,19 @@
             <tr>
               <th>Name</th>
               <th>Nature of Control</th>
+              <th>Country of Residence</th>
+              <th>Notified On</th>
+              <th>Ceased On</th>
             </tr>
           </thead>
           <tbody>
             <% shareholders.forEach(psc => { %>
               <tr>
                 <td><%= psc.name %></td>
-                <td><%= (psc.nature_of_control || []).join(', ') %></td>
+                <td><%= (psc.natures_of_control || psc.nature_of_control || []).map(function(w){ return pretty(w); }).join(', ') %></td>
+                <td><%= psc.country_of_residence || '' %></td>
+                <td><%= psc.notified_on ? new Date(psc.notified_on).toLocaleDateString('en-GB') : '' %></td>
+                <td><%= psc.ceased_on ? new Date(psc.ceased_on).toLocaleDateString('en-GB') : '' %></td>
               </tr>
             <% }) %>
           </tbody>
@@ -103,9 +110,9 @@
               <tr>
                 <td><%= item.date ? new Date(item.date).toLocaleDateString('en-GB') : '' %></td>
                 <td><%= item.type || '' %></td>
-                <td><%= item.category || '' %></td>
+                <td><%= pretty(item.category) %></td>
                 <td>
-                  <%= item.description %>
+                  <%= pretty(item.description) %>
                   <% if (item.description_values) { %>
                     (<%= Object.values(item.description_values).join(', ') %>)
                   <% } %>
