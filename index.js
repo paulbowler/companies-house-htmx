@@ -83,8 +83,8 @@ app.post('/company/:number/analyze', async (req, res) => {
   const companyNumber = req.params.number;
   try {
     // Set up OpenAI client and function definitions
-    const { Configuration, OpenAIApi } = require('openai');
-    const openai = new OpenAIApi(new Configuration({ apiKey: openaiApiKey }));
+    const OpenAI = require('openai');
+    const openai = new OpenAI({ apiKey: openaiApiKey });
     const functions = [
       {
         name: 'search_companies',
@@ -130,8 +130,9 @@ app.post('/company/:number/analyze', async (req, res) => {
       { role: 'user', content: userPrompt }
     ];
     // First API call to potentially invoke functions
-    let response = await openai.createChatCompletion({ model: 'gpt-4.1-mini', messages, functions, function_call: 'auto' });
-    let message = response.data.choices[0].message;
+    // Initial call: allow assistant to call functions if needed
+    let response = await openai.chat.completions.create({ model: 'gpt-4.1-mini', messages, functions, function_call: 'auto' });
+    let message = response.choices[0].message;
     // If a function call is requested by the assistant
     if (message.function_call) {
       const fnName = message.function_call.name;
@@ -159,8 +160,9 @@ app.post('/company/:number/analyze', async (req, res) => {
       messages.push(message);
       messages.push({ role: 'function', name: fnName, content: JSON.stringify(fnResult) });
       // Final assistant call without functions
-      const finalRes = await openai.createChatCompletion({ model: 'gpt-4.1-mini', messages });
-      message = finalRes.data.choices[0].message;
+      // Final assistant response after function execution
+      const finalRes = await openai.chat.completions.create({ model: 'gpt-4.1-mini', messages });
+      message = finalRes.choices[0].message;
     }
     // Send back the assistant's content
     res.render('partials/analysis', { analysis: message.content, prompt: userPrompt });
