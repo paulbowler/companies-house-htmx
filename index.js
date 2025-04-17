@@ -129,7 +129,7 @@ app.post('/company/:number/analyze', async (req, res) => {
     // Call OpenAI Chat API
     const aiRes = await axios.post(
       'https://api.openai.com/v1/chat/completions',
-      { model: 'gpt-3.5-turbo', messages: messages, max_tokens: 800 },
+      { model: 'gpt-4.1-mini', messages: messages, max_tokens: 800 },
       { headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${openaiApiKey}` } }
     );
     const analysis = aiRes.data.choices[0].message.content;
