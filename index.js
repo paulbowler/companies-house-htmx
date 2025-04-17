@@ -73,9 +73,10 @@ app.get('/company/:number', async (req, res) => {
     const shareholders = pscRes.data.items || [];
     const filingHistory = filingHistoryRes.data.items || [];
     // Initialize assistant session for this company
+    // Initialize assistant session for this company, instructing use of functions
     sessions[company.company_number] = {
       messages: [
-        { role: 'system', content: 'You are an expert in UK Companies House data, accounting, and company law.' },
+        { role: 'system', content: 'You are an expert in UK Companies House data, accounting, and company law. Use the provided company_number and the available functions to fetch any required data.' },
         { role: 'system', content: JSON.stringify({ company_number: company.company_number }) }
       ]
     };
