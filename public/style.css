@@ -10,3 +10,9 @@ body {
 .card {
   margin-top: 20px;
 }
+
+/* Prevent table cell wrapping */
+table.table th,
+table.table td {
+  white-space: nowrap;
+}
