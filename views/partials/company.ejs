@@ -1,0 +1,12 @@
+<div class="company-card">
+  <h2><%= company.company_name %></h2>
+  <p><strong>Company Number:</strong> <%= company.company_number %></p>
+  <p><strong>Status:</strong> <%= company.company_status %></p>
+  <p><strong>Incorporated:</strong> <%= company.date_of_creation %></p>
+  <p><strong>Address:</strong></p>
+  <pre>
+<%= company.registered_office_address?.address_line_1 || '' %>
+<%= company.registered_office_address?.locality || '' %>
+<%= company.registered_office_address?.postal_code || '' %>
+  </pre>
+</div>

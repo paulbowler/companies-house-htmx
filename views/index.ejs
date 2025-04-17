@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Companies House Search</title>
+  <script src="https://unpkg.com/htmx.org@1.9.5"></script>
+</head>
+<body>
+  <h1>Search for a Company</h1>
+  <input
+    type="text"
+    name="q"
+    placeholder="Start typing..."
+    hx-get="/search"
+    hx-trigger="keyup changed delay:300ms"
+    hx-target="#results"
+    hx-swap="innerHTML"
+    autocomplete="off"
+  />
+  <div id="results"></div>
+  <div id="company-details"></div>
+</body>
+</html>
