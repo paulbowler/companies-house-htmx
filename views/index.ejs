@@ -66,11 +66,26 @@
     document.body.addEventListener('htmx:beforeRequest', function(evt) {
       var form = evt.detail.elt.closest('#analysis form');
       if (form) {
+        // Disable button and show spinner
         var btn = form.querySelector('button[type=submit]');
         if (btn) {
           btn.disabled = true;
           btn.setAttribute('data-original-text', btn.innerHTML);
-          btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Analyzing...';
+          btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Analysing...';
+        }
+        // Insert user chat bubble
+        var promptEl = form.querySelector('textarea[name="prompt"]');
+        if (promptEl) {
+          var userText = promptEl.value.trim();
+          if (userText) {
+            var container = document.getElementById('analysisResponse');
+            if (container) {
+              // Escape HTML
+              var safeText = userText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+              var userHtml = '<div class="chat-item-user mb-1"><div class="alert alert-secondary mb-0">' + safeText + '</div></div>';
+              container.insertAdjacentHTML('beforeend', userHtml);
+            }
+          }
         }
       }
     });
