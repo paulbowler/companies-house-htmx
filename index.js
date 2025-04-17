@@ -39,12 +39,31 @@ app.get('/search', async (req, res) => {
 
 app.get('/company/:number', async (req, res) => {
   try {
-    const response = await axios.get(
-      `https://api.company-information.service.gov.uk/company/${req.params.number}`,
-      authHeader
-    );
-    console.log(response.data);
-    res.render('partials/company', { company: response.data });
+    // Fetch company details, officers, shareholders (PSC), and filing history concurrently
+    const companyNumber = req.params.number;
+    const [companyRes, officersRes, pscRes, filingHistoryRes] = await Promise.all([
+      axios.get(
+        `https://api.company-information.service.gov.uk/company/${companyNumber}`,
+        authHeader
+      ),
+      axios.get(
+        `https://api.company-information.service.gov.uk/company/${companyNumber}/officers?items_per_page=100`,
+        authHeader
+      ),
+      axios.get(
+        `https://api.company-information.service.gov.uk/company/${companyNumber}/persons-with-significant-control?items_per_page=100`,
+        authHeader
+      ),
+      axios.get(
+        `https://api.company-information.service.gov.uk/company/${companyNumber}/filing-history?items_per_page=100`,
+        authHeader
+      )
+    ]);
+    const company = companyRes.data;
+    const officers = officersRes.data.items || [];
+    const shareholders = pscRes.data.items || [];
+    const filingHistory = filingHistoryRes.data.items || [];
+    res.render('partials/company', { company, officers, shareholders, filingHistory });
   } catch (err) {
     console.error(err.message);
     res.send('<div>Error loading company info</div>');
