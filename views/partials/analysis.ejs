@@ -1,18 +1,22 @@
 <% if (analysis) { %>
-<div class="analysis-result mb-4">
-  <div class="analysis-question mb-2 fw-bold">Q: <%= prompt %></div>
-  <div class="analysis-content bg-light p-3 border rounded markdown-body"></div>
-</div>
-<script>
-  (function() {
-    // Render markdown analysis in the correct container
-    var container = document.currentScript.previousElementSibling;
-    var markdown = <%- JSON.stringify(analysis) %>;
-    container.querySelector('.analysis-content').innerHTML = marked.parse(markdown);
-  })();
-</script>
+  <!-- User message -->
+  <div class="chat-item-user mb-1">
+    <div class="alert alert-primary mb-0"><%= prompt %></div>
+  </div>
+  <!-- Assistant message -->
+  <div class="chat-item-assistant mb-3">
+    <div class="assistant-markdown bg-light p-3 border rounded markdown-body"></div>
+  </div>
+  <script>
+    (function() {
+      // Render markdown in the last assistant message container
+      var containers = document.querySelectorAll('#analysisResponse .chat-item-assistant .assistant-markdown');
+      var last = containers[containers.length - 1];
+      last.innerHTML = marked.parse(<%- JSON.stringify(analysis) %>);
+    })();
+  </script>
 <% } else { %>
-<div class="analysis-result mb-4">
-  <div class="text-danger">Error generating analysis.</div>
-</div>
+  <div class="chat-item-assistant mb-3">
+    <div class="alert alert-danger mb-0">Error generating analysis.</div>
+  </div>
 <% } %>

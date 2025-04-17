@@ -16,3 +16,14 @@ table.table th,
 table.table td {
   white-space: nowrap;
 }
+/* Chat message styling */
+#analysisResponse {
+  display: flex;
+  flex-direction: column;
+}
+.chat-item-user .alert {
+  align-self: flex-end;
+}
+.chat-item-assistant .alert {
+  align-self: flex-start;
+}
