@@ -21,6 +21,8 @@ const authHeader = {
 };
 // OpenAI API key for analysis
 const openaiApiKey = process.env.OPENAI_API_KEY;
+// In-memory session store for conversation contexts
+const sessions = {};
 // No server-side PDF parsing; provide document URLs for AI to fetch and analyze
 
 app.get('/', (req, res) => {
@@ -70,6 +72,13 @@ app.get('/company/:number', async (req, res) => {
     const officers = officersRes.data.items || [];
     const shareholders = pscRes.data.items || [];
     const filingHistory = filingHistoryRes.data.items || [];
+    // Initialize assistant session for this company
+    sessions[company.company_number] = {
+      messages: [
+        { role: 'system', content: 'You are an expert in UK Companies House data, accounting, and company law.' },
+        { role: 'system', content: JSON.stringify({ company_number: company.company_number }) }
+      ]
+    };
     res.render('partials/company', { company, officers, shareholders, filingHistory });
   } catch (err) {
     console.error(err.message);
@@ -124,16 +133,18 @@ app.post('/company/:number/analyze', async (req, res) => {
         parameters: { type: 'object', properties: { company_number: { type: 'string' } }, required: ['company_number'] }
       }
     ];
-    // Prepare initial messages
-    const messages = [
-      { role: 'system', content: 'You are an expert in UK Companies House data, accounting, and company law. Call provided functions to fetch data as needed.' },
-      { role: 'user', content: userPrompt }
-    ];
+    // Retrieve or initialize session messages for this company
+    const session = sessions[companyNumber] || { messages: [] };
+    const messages = session.messages;
+    // Append user prompt
+    messages.push({ role: 'user', content: userPrompt });
     // First API call to potentially invoke functions
     // Initial call: allow assistant to call functions if needed
+    // First pass: allow assistant to call functions
     let response = await openai.chat.completions.create({ model: 'gpt-4.1-mini', messages, functions, function_call: 'auto' });
     let message = response.choices[0].message;
     // If a function call is requested by the assistant
+    // If assistant invoked a function, execute and continue
     if (message.function_call) {
       const fnName = message.function_call.name;
       const fnArgs = JSON.parse(message.function_call.arguments);
@@ -157,13 +168,18 @@ app.post('/company/:number/analyze', async (req, res) => {
       };
       const fnResult = await fnMap[fnName](fnArgs);
       // Append assistant call and function response to messages
+      // Record the function call message
       messages.push(message);
+      // Record the function response
       messages.push({ role: 'function', name: fnName, content: JSON.stringify(fnResult) });
       // Final assistant call without functions
       // Final assistant response after function execution
+      // Final assistant response without further function calls
       const finalRes = await openai.chat.completions.create({ model: 'gpt-4.1-mini', messages });
       message = finalRes.choices[0].message;
     }
+    // Save assistant message to session
+    messages.push(message);
     // Send back the assistant's content
     res.render('partials/analysis', { analysis: message.content, prompt: userPrompt });
   } catch (err) {
