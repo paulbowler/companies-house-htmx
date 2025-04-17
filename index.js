@@ -21,8 +21,7 @@ const authHeader = {
 };
 // OpenAI API key for analysis
 const openaiApiKey = process.env.OPENAI_API_KEY;
-// PDF parsing
-const pdfParse = require('pdf-parse');
+// No server-side PDF parsing; provide document URLs for AI to fetch and analyze
 
 app.get('/', (req, res) => {
   res.render('index');
@@ -106,43 +105,25 @@ app.post('/company/:number/analyze', async (req, res) => {
     const officers = officersRes.data.items || [];
     const shareholders = pscRes.data.items || [];
     const filingHistory = filingHistoryRes.data.items || [];
-    // Fetch and parse filing documents (e.g., PDFs) for context (limit to first 3)
+    // Collect up to 3 document URLs for AI to fetch and analyze
     const documents = [];
-    for (let i = 0; i < Math.min(filingHistory.length, 3); i++) {
-      const item = filingHistory[i];
-      try {
-        // Determine metadata URL (prefer link in item if present)
-        const metadataPath = item.links && (item.links.document_metadata || item.links.documentMetadata);
-        const metaUrl = metadataPath
-          ? (metadataPath.startsWith('http')
-              ? metadataPath
-              : `https://api.company-information.service.gov.uk${metadataPath}`)
-          : `https://api.company-information.service.gov.uk/company/${companyNumber}/filing-history/${item.transaction_id}/document_metadata`;
-        // Get document metadata
-        const metaRes = await axios.get(metaUrl, authHeader);
-        const docPath = metaRes.data.links && (metaRes.data.links.document || metaRes.data.links.document_path);
-        if (docPath) {
-          // Build correct PDF URL
-          const pdfUrl = docPath.startsWith('http')
-            ? docPath
-            : `https://api.company-information.service.gov.uk${docPath}`;
-          // Fetch PDF
-          const pdfRes = await axios.get(pdfUrl, { ...authHeader, responseType: 'arraybuffer' });
-          // Parse PDF text
-          const parsed = await pdfParse(pdfRes.data);
-          documents.push({ description: item.description, date: item.date, text: parsed.text });
-        }
-      } catch (docErr) {
-        // No document available or parse failed; skip gracefully
-        console.info(`Skipping filing ${item.transaction_id}: ${docErr.message}`);
+    filingHistory.slice(0, 3).forEach(item => {
+      const metaLink = item.links && (item.links.document_metadata || item.links.documentMetadata);
+      const metaUrl = metaLink && (metaLink.startsWith('http')
+        ? metaLink
+        : `https://api.company-information.service.gov.uk${metaLink}`);
+      if (metaUrl) {
+        // Derive document URL
+        const docUrl = metaUrl.replace(/document_metadata$/i, 'document');
+        documents.push({ description: item.description, date: item.date, url: docUrl });
       }
-    }
+    });
     // Construct messages for OpenAI
-    // Construct messages with documents
+    // Construct messages for AI: provide company data, document URLs, and user request
     const messages = [
-      { role: 'system', content: 'You are an expert in UK Companies House data, accounting, and company law. Provide analysis, warnings, and risk profiles for corporate entities. You may reference provided financial document texts.' },
-      { role: 'user', content: `Company data: ${JSON.stringify({ company, officers, shareholders, filingHistory })}.` },
-      { role: 'user', content: `Document contexts (parsed text) for analysis: ${JSON.stringify(documents)}` },
+      { role: 'system', content: 'You are an expert in UK Companies House data, accounting, and company law. Use the provided API document URLs to fetch and analyze balance sheets and other submitted forms as needed.' },
+      { role: 'user', content: `Company data: ${JSON.stringify({ company, officers, shareholders, filingHistory })}` },
+      { role: 'user', content: `Document URLs for context: ${JSON.stringify(documents)}` },
       { role: 'user', content: `User request: ${prompt}` }
     ];
     // Call OpenAI Chat API
